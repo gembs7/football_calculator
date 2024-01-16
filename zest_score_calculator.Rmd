@@ -1,0 +1,169 @@
+---
+title: "zestscore"
+author: "Nick Gembs"
+date: "8/12/2023"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+getwd()
+setwd("C:/Users/Nick/Downloads")
+getwd()
+
+
+G_Rank <- read.csv("C:/Users/Nick/Downloads/fruity_and_zesty.csv")
+T_Rank <- read.csv("C:/Users/Nick/Downloads/FantasyPros_2023_Draft_ALL_Rankings (1).csv")
+weights <- read.csv("C:/Users/Nick/Downloads/pick_weights.csv")
+```
+
+```{r}
+all_info_holder = merge(x = G_Rank,y = T_Rank, by.x = "Name", by.y = "PLAYER.NAME")
+subset = all_info_holder[,c("Name","Overall.Rank","RK")]
+
+```
+
+```{r}
+T_Rank
+```
+
+
+```{r}
+calc_score <- function (pick, name) {
+
+  tryCatch({
+  vals = subset[tolower(subset$Name) == tolower(name), c(2,3)]
+  weight = weights[pick, "Value"]
+  i = 1
+  if (weight * ((pick - vals[1, 1]) + (pick - vals[1, 2])) < 0) {
+    i = -1
+  }
+  return(weight *i * sqrt(abs( ((pick - vals[1, 1]) + (pick - vals[1, 2])+4))))
+}, error = function(err) {
+  return(0)
+})
+
+  
+}
+```
+
+```{r}
+total_team_score <- function(pick, players){
+  gap1 = 2*(12-pick)+1
+  gap2 = 2*(pick-1)+1
+  picks = pick
+  for (i in 2:18){
+    if (i%%2 == 0){
+      picks = c(picks, picks[i-1]+gap1)
+    } else {
+      picks = c(picks, picks[i-1]+gap2)
+    }
+  }
+  p = 1
+  score = 0
+  for (i in picks){
+    print (players[p])
+    print (calc_score(i, players[p]))
+    score = score + calc_score(i, players[p])
+    p = p + 1
+  }
+  return(score)
+}
+```
+
+```{r}
+total_team_score_list <- function(pick, players){
+  gap1 = 2*(12-pick)+1
+  gap2 = 2*(pick-1)+1
+  picks = pick
+  for (i in 2:18){
+    if (i%%2 == 0){
+      picks = c(picks, picks[i-1]+gap1)
+    } else {
+      picks = c(picks, picks[i-1]+gap2)
+    }
+  }
+  p = 1
+  score = c()
+  for (i in picks){
+    print (players[p])
+    print (calc_score(i, players[p]))
+    score = c(score,calc_score(i, players[p]))
+    p = p + 1
+  }
+  return(score)
+}
+```
+
+```{r}
+calc_score(9, "Saquon Barkley")
+calc_score(16, "Ceedee Lamb")
+calc_score(33, "Travis Etienne")
+calc_score(40, "Calvin Ridley")
+calc_score(57, "Jerry Jeudy")
+calc_score(64, "Rashaad Penny")
+calc_score(81, "Jahan Dotson")
+calc_score(88, "David Njoku")
+calc_score(105, "Jaxon Smith-Njigba")
+calc_score(112, "Elijah Moore")
+calc_score(129, "Aaron Rodgers")
+calc_score(136, "Ezequiel Elliot")
+calc_score(153, "Zach Charbonnet")
+calc_score(160, "Anthony Richardson")
+calc_score(177, "Tyler Bass")
+calc_score(194, "New England Patriots")
+calc_score(201, "D.J. Chark")
+calc_score(218, "Joan Duggan")
+```
+```{r}
+draft <- read.csv("C:/Users/Nick/Documents/infoonpicks.csv")
+```
+
+```{r}
+draft$X...Matt
+```
+```{r}
+total_team_score(1, draft$X...Matt)
+
+```
+```{r}
+total_team_score(2,draft$Jack)
+```
+```{r}
+total_team_score(3,draft$Chase)
+```
+```{r}
+total_team_score(4,draft$Ethan)
+```
+```{r}
+total_team_score(5,draft$Miller)
+```
+```{r}
+total_team_score(6,draft$Luke)
+```
+```{r}
+total_team_score(7,draft$Nick)
+```
+```{r}
+total_team_score(8,draft$Jake)
+```
+```{r}
+total_team_score(9,draft$Adam)
+```
+```{r}
+total_team_score(10,draft$Tyler)
+```
+
+```{r}
+total_team_score(11,draft$James)
+```
+```{r}
+total_team_score(12,draft$Joe)
+```
+
