@@ -14,23 +14,93 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 getwd()
-setwd("C:/Users/Nick/Downloads")
+setwd("C:/Users/ngemb/Downloads/zest")
 getwd()
 
 
-G_Rank <- read.csv("C:/Users/Nick/Downloads/fruity_and_zesty.csv")
-T_Rank <- read.csv("C:/Users/Nick/Downloads/FantasyPros_2023_Draft_ALL_Rankings (1).csv")
-weights <- read.csv("C:/Users/Nick/Downloads/pick_weights.csv")
+G_Rank <- read.csv("C:/Users/ngemb/Downloads/zest/fruity_and_zesty3.csv")
+T_Rank <- read.csv("C:/Users/ngemb/Downloads/zest/FantasyPros_2024_Draft_ALL_Rankings.csv")
+weights <- read.csv("C:/Users/ngemb/Downloads/zest/pick_weights.csv")
+gusto <- read.csv("C:/Users/ngemb/Downloads/zest/scrapey1.csv")
+
+
 ```
 
 ```{r}
-all_info_holder = merge(x = G_Rank,y = T_Rank, by.x = "Name", by.y = "PLAYER.NAME")
-subset = all_info_holder[,c("Name","Overall.Rank","RK")]
-
+G_Rank
 ```
 
 ```{r}
 T_Rank
+```
+```{r}
+defenseformat <- function(input_string) {
+
+  words <- strsplit(input_string, "\\s+")[[1]]
+  
+
+  last_word <- tail(words, 1)
+ 
+  result <- paste0(last_word, " D/ST")
+  
+ 
+  return(result)
+}
+
+# Example usage
+example_string <- "Los Angeles Chargers"
+result <- defenseformat(example_string)
+print(result)
+
+```
+```{r}
+for (i in 1:length(T_Rank$POS)){
+  if (startsWith(T_Rank[i,"POS"], "DST")){
+    T_Rank[i,"PLAYER.NAME"] = defenseformat(T_Rank[i,"PLAYER.NAME"])
+    
+  }
+}
+
+for (i in 1:length(gusto$pos)){
+  if (startsWith(gusto[i,"pos"], "DST")){
+    if(!endsWith(gusto[i,"name"], "D/ST")){
+      gusto[i,"name"] = defenseformat(gusto[i,"name"])
+      
+    } 
+    
+    
+  }
+}
+```
+
+```{r}
+gusto
+```
+
+```{r}
+convert_name = function(original){
+  hold = tolower(gsub("[.' -/]", "", original))
+  return(substr(hold, 1, 11))}
+```
+
+```{r}
+G_Rank$nameid = convert_name(G_Rank$Name)
+T_Rank$nameid = convert_name(T_Rank[,"PLAYER.NAME"])
+gusto$nameid = convert_name(gusto$name)
+```
+
+
+```{r}
+all_info_holder = merge(x = G_Rank,y = T_Rank, by.x = "nameid", by.y = "nameid")
+all_info_holder = merge(x = all_info_holder,y = gusto, by.x = "nameid", by.y = "nameid")
+subset = all_info_holder[,c("Name","Overall.Rank","RK","gusto","nameid")]
+subset <- subset[!duplicated(subset$nameid), ]
+subset$gusto <- round(subset$gusto, digits = 2)
+
+```
+
+```{r}
+subset
 ```
 
 
@@ -38,13 +108,42 @@ T_Rank
 calc_score <- function (pick, name) {
 
   tryCatch({
-  vals = subset[tolower(subset$Name) == tolower(name), c(2,3)]
+  vals = subset[subset$nameid == convert_name(name), c(2,3,4,1)]
   weight = weights[pick, "Value"]
   i = 1
-  if (weight * ((pick - vals[1, 1]) + (pick - vals[1, 2])) < 0) {
+  
+  if (vals[1, 1] > 192){
+    vals[1, 1] = 193
+  }
+  
+  if (vals[1, 2] > 192){
+    vals[1, 2] = 193
+  }
+  
+  if (((pick - vals[1, 1]) ) < -3) {
     i = -1
   }
-  return(weight *i * sqrt(abs( ((pick - vals[1, 1]) + (pick - vals[1, 2])+4))))
+  
+  ii = 1
+  if (((pick - vals[1, 2]) ) < -3) {
+    ii = -1
+  }
+  
+  
+  zest1 = (weight/40) * (i*((3+pick - vals[1, 1])^2) + ii*((3+pick - vals[1, 2])^2))
+  gusto1 = vals[1,3]*1.5
+  if (vals[1, 1] | vals[1, 2] < 25){
+     gusto1 = gusto1*2
+  }
+  if (pick > 144){
+     gusto1 = (gusto1/10)+5
+     zest1 = zest1/7.5
+  } else if (pick > 96){
+    gusto1 = gusto1/2
+  }
+   
+  score1 = zest1+gusto1
+  return(list(name = vals[1,4], zest = zest1, gusto = gusto1, total = score1))
 }, error = function(err) {
   return(0)
 })
@@ -52,6 +151,16 @@ calc_score <- function (pick, name) {
   
 }
 ```
+
+```{r}
+info <- function(name){
+  vals = subset[subset$nameid == convert_name(name), c(2,3,4,1)]
+  more = T_Rank[T_Rank$nameid == convert_name(name), c(4,5,6,7)]
+  most = gusto[gusto$nameid == convert_name(name), c(2,4,5,6)]
+  return (list(name = vals[1,4], positional_rank = more[1,2], bye = more[1,3], strength_of_schedule = more[1,4], team = more[1,1], proj_points = most[1,1], floor = most[1,2], ceiling = most[1,3], VOR = most[1,4] ))
+}
+```
+
 
 ```{r}
 total_team_score <- function(pick, players){
@@ -102,68 +211,246 @@ total_team_score_list <- function(pick, players){
 ```
 
 ```{r}
+print("saquon 9")
 calc_score(9, "Saquon Barkley")
+print("ceedee 16")
 calc_score(16, "Ceedee Lamb")
+print("Travvy 33")
 calc_score(33, "Travis Etienne")
+print("ridley 40")
 calc_score(40, "Calvin Ridley")
+print("Jeudy 57")
 calc_score(57, "Jerry Jeudy")
+print("puppy 64")
 calc_score(64, "Rashaad Penny")
+print("jahan 81")
 calc_score(81, "Jahan Dotson")
+print("face 88")
 calc_score(88, "David Njoku")
+print("njig 105")
 calc_score(105, "Jaxon Smith-Njigba")
+print("elijah more 112")
 calc_score(112, "Elijah Moore")
+print("joe qb 129")
 calc_score(129, "Aaron Rodgers")
+print("zeke 136")
 calc_score(136, "Ezequiel Elliot")
+print("charbonnet 153")
 calc_score(153, "Zach Charbonnet")
+print("a rich 160")
 calc_score(160, "Anthony Richardson")
+print("tb 177")
 calc_score(177, "Tyler Bass")
+print("pats 194")
 calc_score(194, "New England Patriots")
+print("dj chark 201")
 calc_score(201, "D.J. Chark")
+print("joan 218")
 calc_score(218, "Joan Duggan")
 ```
+
 ```{r}
-draft <- read.csv("C:/Users/Nick/Documents/infoonpicks.csv")
+calc_score(3,"tyreek hill")
+calc_score(22, "travis etienne")
+calc_score(27, "d.k. metcalf")
+calc_score(46, "devonta smith")
+calc_score(51, "trey mcbride")
+calc_score(70, "zay flowers")
+calc_score(75, "nick chubb")
+calc_score(94, "jerome ford")
+calc_score(99, "ezekiel elliot")
+calc_score(118, "kyler murray")
+calc_score(123, "keon coleman")
+calc_score(142, "rico dowdle")
+calc_score(147, "Ravens")
+calc_score(166,"Quentin Johnson")
+calc_score(171, "Jayden Daniels")
+calc_score(190, "Jake Elliot")
+calc_score(195,"Demario Douglas")
+calc_score(214, "Chase Brown")
+
+```
+
+
+
+
+<!-- ```{r} -->
+<!-- draft <- read.csv("C:/Users/Nick/Documents/infoonpicks.csv") -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- draft$X...Matt -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- total_team_score(1, draft$X...Matt) -->
+
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- total_team_score(2,draft$Jack) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- total_team_score(3,draft$Chase) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- total_team_score(4,draft$Ethan) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- total_team_score(5,draft$Miller) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- total_team_score(6,draft$Luke) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- total_team_score(7,draft$Nick) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- total_team_score(8,draft$Jake) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- total_team_score(9,draft$Adam) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- total_team_score(10,draft$Tyler) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- total_team_score(11,draft$James) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- total_team_score(12,draft$Joe) -->
+<!-- ``` -->
+
+################################################################################
+
+```{r}
+library(base64enc)
+
+# Convert the image to a Base64 string
+base64_image <- base64enc::dataURI(file = 'C:/Users/ngemb/Downloads/zest/Image.jpeg', mime = "image/png")
+
+yump <- base64enc::dataURI(file = 'C:/Users/ngemb/Downloads/zest/b.jpg', mime = "image/png")
+yumps <- base64enc::dataURI(file = 'C:/Users/ngemb/Downloads/zest/c.jpg', mime = "image/png")
+yumpy <- base64enc::dataURI(file = 'C:/Users/ngemb/Downloads/zest/d.jpg', mime = "image/png")
+yumpr <- base64enc::dataURI(file = 'C:/Users/ngemb/Downloads/zest/e.jpeg', mime = "image/png")
+yumpd <- base64enc::dataURI(file = 'C:/Users/ngemb/Downloads/zest/f.png', mime = "image/png")
 ```
 
 ```{r}
-draft$X...Matt
-```
-```{r}
-total_team_score(1, draft$X...Matt)
+# Load Shiny library
+library(shiny)
 
-```
-```{r}
-total_team_score(2,draft$Jack)
-```
-```{r}
-total_team_score(3,draft$Chase)
-```
-```{r}
-total_team_score(4,draft$Ethan)
-```
-```{r}
-total_team_score(5,draft$Miller)
-```
-```{r}
-total_team_score(6,draft$Luke)
-```
-```{r}
-total_team_score(7,draft$Nick)
-```
-```{r}
-total_team_score(8,draft$Jake)
-```
-```{r}
-total_team_score(9,draft$Adam)
-```
-```{r}
-total_team_score(10,draft$Tyler)
-```
+# Define UI for application
+ui <- fluidPage(
+  titlePanel("Zest Calculator"),
+  
+  tags$head(
+    tags$style(
+      HTML("
+        /* Custom CSS for larger text */
+        .main-panel-text {
+          font-size: 20px; /* Adjust the font size as needed */
+        }
+        /* Set background color */
+        body {
+          background-color: #333333; /* Black background */
+          color: white; /* White text color */
+        }
+      ")
+      
+    )
+  ),
+  
+  
+  
+  sidebarLayout(
+    sidebarPanel(
+      numericInput("pick", "Pick Number:", value = 1),
+      textInput("name", "Player:", value = ""),
+      actionButton("calculate", "Calculate"),
+      style = "background-color: #5cb85c; color: white; padding: 15px;"
+    ),
+    
+    mainPanel(
+      img(src = base64_image, height = '150px', width = '150px'),
+      img(src = yump, height = '150px', width = '150px'),
+      img(src = yumps, height = '150px', width = '150px'),
+      img(src = yumpy, height = '150px', width = '150px'),
+      img(src = yumpd, height = '150px', width = '150px'),
+      img(src = yumpr, height = '150px', width = '150px'),
+      
+      span(textOutput("name"), style="color:white; font-size:30px; font-weight: bold;"),
+      
+      span(textOutput("zest"), style="color:white; font-size:20px; font-weight: bold;"),
+      span(textOutput("gusto"), style="color:white; font-size:20px; font-weight: bold;"),
+      span(textOutput("total"), style="color:#00ff00; font-size:35px; font-weight: bold;"),
+      
+      span(textOutput("bye"), style="color:white; font-size:12px"),
+      span(textOutput("sos"), style="color:white; font-size:12px"),
+      span(textOutput("vor"), style="color:white; font-size:12px"),
+      span(textOutput("rk"), style="color:white; font-size:12px; font-weight: bold;"),
+    )
+  )
+)
 
-```{r}
-total_team_score(11,draft$James)
-```
-```{r}
-total_team_score(12,draft$Joe)
+# Define server logic
+server <- function(input, output) {
+  observeEvent(input$calculate, {
+    # Get inputs
+    pick <- input$pick
+    name <- input$name
+    
+    if (!is.numeric(pick) || pick <= 0) {
+      showNotification("Pick number should be a positive integer.", type = "warning")
+      return()
+    }
+    if (is.null(name) || nchar(trimws(name)) == 0) {
+      showNotification("Player name cannot be empty.", type = "warning")
+      return()
+    }
+    
+    # Call calc_score function
+    scores <- calc_score(pick, name)
+    info <- info(name)
+    
+    # Display the results
+    output$zest <- renderText({
+      paste("Zest:", round(scores$zest, digits = 2), "\n")
+    })
+    
+    output$gusto <- renderText({
+      paste("Gusto:", scores$gusto, "\n")
+    })
+    
+    output$total <- renderText({
+      paste("Total:", round(scores$total, digits = 2))
+    })
+    
+    output$name <- renderText({
+      paste(info$name, ", " , info$team)
+    })
+    
+    output$bye <- renderText({
+      paste("Bye:", info$bye)
+    })
+    
+    output$sos <- renderText({
+      paste("Strength of Schedule:", info$strength_of_schedule)
+    })
+    
+    output$vor <- renderText({
+      paste("VOR:", info$VOR)
+    })
+    
+    
+    
+    output$rk <- renderText({
+      paste("FantasyPros Rank:", info$positional_rank)
+    })
+    
+  })
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
 ```
 

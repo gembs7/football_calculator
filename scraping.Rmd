@@ -1,0 +1,280 @@
+---
+title: "Zest Test"
+author: "Nick Gembs"
+date: "7/11/2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("ffanalytics")
+my_scrape <- scrape_data(src = c("CBS", "ESPN", "Yahoo", "FantasyPros", "NFL", "NumberFire", "Walterfootball"), 
+                         pos = c("QB", "RB", "WR", "TE", "DST", "K"),
+                         season = 2024, week = 0)
+```
+
+```{r}
+my_scrape$WR
+```
+
+```{r}
+pisapia_scrape <- scrape_data(src = c( "FantasyPros"), 
+                         pos = c("QB", "RB", "WR", "TE", "DST", "K"),
+                         season = 2024, week = 0)
+```
+
+```{r}
+#pisapia_scrape$RB
+```
+```{r}
+backs = my_scrape$RB
+```
+
+```{r}
+
+x = 1
+backs$oline = NA
+for (i in backs$team) {
+  backs$oline[x] = switch(i,
+                     DET = {1},
+                     PHI = {2},
+                     IND = {3},
+                     CLE = {4},
+                     NYJ = {5},
+                     ATL = {6},
+                     KC = {7},
+                     BUF = {8},
+                     PIT = {9},
+                     DAL = {10},
+                     CHI = {11},
+                     LAC = {12},
+                     MIN = {13},
+                     GB = {14},
+                     DEN = {15},
+                     LAR = {16},
+                     TB = {17},
+                     MIA = {18},
+                     LV = {19},
+                     CAR = {20},
+                     CIN = {21},
+                     HOU = {22},
+                     JAC = {23},
+                     SF = {24},
+                     BAL = {25},
+                     ARI = {26},
+                     WAS = {27},
+                     NE = {28},
+                     NYG = {29},
+                     TEN = {30},
+                     31)
+  x = x+1
+  
+}
+
+
+```
+
+
+
+```{r}
+#backs
+```
+
+```{r}
+#rb_score = function(games, att, rshyds, rshtds, tgt, recyds, rectds, oline)
+```
+
+
+```{r}
+value <- "B"
+
+result <- switch(value,
+                 A = {
+                   # Code to execute if value == "A"
+                   "A selected"
+                 },
+                 B = {
+                   # Code to execute if value == "B"
+                   "B selected"
+                 },
+                 C = {
+                   # Code to execute if value == "C"
+                   "C selected"
+                 },
+                 "Default case"
+)
+
+print(result)
+```
+
+
+```{r}
+
+scoring_settings = 
+  
+list(
+  pass = list(
+    pass_att = 0, pass_comp = 0, pass_inc = 0, pass_yds = 0.04, pass_tds = 4,
+    pass_int = -2, pass_40_yds = 0,  pass_300_yds = 0, pass_350_yds = 0,
+    pass_400_yds = 0
+  ),
+  rush = list(
+    all_pos = TRUE,
+    rush_yds = 0.1,  rush_att = 0, rush_40_yds = 0, rush_tds = 6,
+    rush_100_yds = 0, rush_150_yds = 0, rush_200_yds = 0),
+  rec = list(
+    all_pos = TRUE,
+    rec = 0.5, rec_yds = 0.1, rec_tds = 6, rec_40_yds = 0, rec_100_yds = 0,
+    rec_150_yds = 0, rec_200_yds = 0
+  ),
+  misc = list(
+    all_pos = TRUE,
+    fumbles_lost = -2, fumbles_total = 0,
+    sacks = 0, two_pts = 2
+  ),
+  kick = list(
+    xp = 1.0, fg_0019 = 3.0,  fg_2029 = 3.0, fg_3039 = 3.0, fg_4049 = 4.0,
+    fg_50 = 5.0,  fg_miss = -1.0
+  ),
+  ret = list(
+    all_pos = TRUE,
+    return_tds = 6, return_yds = 0
+  ),
+  idp = list(
+    all_pos = TRUE,
+    idp_solo = 1, idp_asst = 0.5, idp_sack = 2, idp_int = 3,  idp_fum_force = 3,
+    idp_fum_rec = 2,  idp_pd = 1, idp_td = 6,  idp_safety = 2
+  ),
+  dst = list(
+    dst_fum_rec = 2,  dst_int = 2, dst_safety = 2, dst_sacks = 1, dst_td = 6,
+    dst_blk = 1, dst_ret_yds = 0, dst_pts_allowed = 0
+  ),
+  pts_bracket = list(
+    list(threshold = 0, points = 10),
+    list(threshold = 6, points = 7),
+    list(threshold = 20, points = 4),
+    list(threshold = 34, points = 0),
+    list(threshold = 99, points = -4)
+  )
+)
+```
+
+
+```{r}
+weights = c(CBS = 0.3, Yahoo = 0.400, ESPN = 0.35, NFL = 0.35, FFToday = 0.15, NumberFire = 0.3, FantasyPros = 0.1, FantasySharks = 0, FantasyFootballNerd = 0.1, Walterfootball = 0.35, RTSports = 0.1, FantasyData = 0.1, Fleaflicker = 0.1)
+```
+
+```{r}
+proj = projections_table(my_scrape, scoring_settings, weights)
+```
+
+```{r}
+#proj
+```
+
+```{r}
+library("dplyr")
+proj1 = proj %>% add_ecr()  %>%
+  add_adp() 
+
+```
+
+```{r}
+proj1
+```
+
+```{r}
+df = bind_rows(my_scrape)
+names = df[,c("player","id")]
+names(names) <- c("name", "id")
+```
+
+```{r}
+scrape_final = proj1 %>%
+  left_join(names, by = "id")
+
+scrape_final = scrape_final %>%
+  distinct()
+
+scrape_final <- scrape_final[!duplicated(scrape_final$name), ]
+```
+
+```{r}
+scrape_final
+```
+```{r}
+names
+```
+
+```{r}
+# devin singletary 
+scQB = scrape_final[scrape_final$pos == "QB",]
+QB_mean = mean(scQB$points)
+QB_sd = sd(scQB$points)
+scQB = NA
+
+scWR = scrape_final[scrape_final$pos == "WR",]
+WR_mean = mean(scWR$points)
+WR_sd = sd(scWR$points)
+scWR = NA
+
+scRB = scrape_final[scrape_final$pos == "RB",]
+RB_mean = mean(scRB$points)
+RB_sd = sd(scRB$points)
+scRB = NA
+
+scTE = scrape_final[scrape_final$pos == "TE",]
+TE_mean = mean(scTE$points)
+TE_sd = sd(scTE$points)
+scTE = NA
+
+scDST = scrape_final[scrape_final$pos == "DST",]
+DST_mean = mean(scDST$points)
+DST_sd = sd(scDST$points)
+scDST = NA
+
+scK = scrape_final[scrape_final$pos == "K",]
+K_mean = mean(scK$points)
+K_sd = sd(scK$points)
+scK = NA
+
+scrape_final$gusto = NA
+ind = 1
+
+for (i in scrape_final$pos){
+  
+  scrape_final[ind, "gusto"] = switch (i,
+                                       
+                                       QB = {((scrape_final[ind, "points"] - QB_mean*1.3)/ QB_sd) * 16 - 13.6005315
+},
+                                       RB = {((scrape_final[ind, "points"] - RB_mean*1.5)/ RB_sd) * 20 - 13.6005315
+},
+                                       WR = {((scrape_final[ind, "points"] - WR_mean*1.5)/ WR_sd) * 20 - 13.6005315
+},
+                                       TE = {((scrape_final[ind, "points"] - TE_mean*2)/ TE_sd) * 17 - 13.6005315
+},
+                                       DST = {((scrape_final[ind, "points"] - DST_mean)/ DST_sd) * 5 -5
+},
+                                       K = {((scrape_final[ind, "points"] - K_mean)/ K_sd) * 5 - 2
+},
+                                       0
+                                       
+                                       )
+  ind = ind + 1
+}
+
+  
+```
+
+
+
+```{r}
+library(openxlsx)
+```
+```{r}
+write.xlsx(scrape_final, "scrapey1.xlsx")
+```
+
